@@ -1,0 +1,75 @@
+#!/bin/zsh -eu
+# @(#) Restful workflow runner
+
+unset request_base_url
+unset tmpfile
+unset verbose
+
+request_base_url=''
+verbose=1
+
+exit_trap() {
+  [[ -n ${tmpfile-} ]] && rm -f "$tmpfile"
+  echo "bye."
+}
+
+trap exit_trap EXIT
+
+tmpfile=$(mktemp -t "${0##*/}.json")
+
+BASE_URL() {
+  request_base_url="$1"
+}
+REQUEST() {
+  local http_code
+  local data
+  local req_content='Content-Type: application/json; charset=UTF-8'
+  local target_url="${request_base_url}$2"
+  if [ -t 0 ]; then
+    echo "$1 $2"
+    http_code=$(curl -sS -o "${tmpfile}" -w '%{http_code}' -X "$1" -H "${req_content}" "${target_url}")
+  else
+    echo "$1 $2 << a data"
+    data=$(cat; echo '.')
+    data=${data%.}
+    # echo "${data}" | hexdump -C
+    http_code=$(curl -sS -o "${tmpfile}" -w '%{http_code}' -X "$1" -H "${req_content}" -d "$data" "${target_url}")
+  fi
+
+  if [ $verbose -ge 1 ]; then
+    echo "RESPONSE: code=${http_code}"
+    if type 'jq' > /dev/null 2>&1; then
+      cat "${tmpfile}" | jq '.' -C
+    else
+      cat "${tmpfile}"
+    fi
+  fi
+
+  if [[ $(( $http_code - $http_code % 200 )) -eq 200 ]]; then
+    return 0
+  fi
+
+  if [ $verbose -ge 1 ]; then
+    echo "${data}" | cat -n
+  fi
+  return 1
+}
+SKIP() {
+  if [ -t 0 ]; then
+    echo "Skip $1 $2"
+  else
+    echo "Skip $1 $2 << a data"
+  fi
+}
+DELETE() { REQUEST DELETE "$1"; }
+GET() { REQUEST GET "$1"; }
+POST() { REQUEST POST "$1"; }
+PUT() { REQUEST PUT "$1"; }
+XDELETE() { SKIP DELETE "$1"; }
+XGET() { SKIP GET "$1"; }
+XPOST() { SKIP POST "$1"; }
+XPUT() { SKIP PUT "$1"; }
+
+for file in "$@"; do
+  source "$1"
+done
