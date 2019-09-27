@@ -1,4 +1,4 @@
-#!/bin/zsh -eu
+#!/bin/sh -eu
 # @(#) Restful workflow runner
 
 unset request_base_url
