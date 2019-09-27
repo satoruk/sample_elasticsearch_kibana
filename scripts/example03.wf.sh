@@ -1,6 +1,9 @@
 #!/bin/sh -eu
 
-# 時系列データの指定した日時時点の情報を取得
+# ユースケース
+# ユーザ(uid)の自転車の買い替えを記録しておき、
+# 特定の日時にどのブランドの自転車を愛用していたかを検索する.
+
 BASE_URL http://localhost:9200/
 
 verbose=0
@@ -10,10 +13,9 @@ PUT example03 <<EOD
 {
   "mappings": {
     "properties": {
-      "uid":     { "type": "keyword" },
-      "name":    { "type": "text"    },
-      "age":     { "type": "integer" },
-      "born_on": { "type": "date"    }
+      "uid":        { "type": "integer" },
+      "name":       { "type": "text"    },
+      "created_at": { "type": "date"    }
     }
   }
 }
